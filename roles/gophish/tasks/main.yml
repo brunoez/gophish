@@ -1,0 +1,173 @@
+- name: Garantir que o Firewall (ufw) está instalado no host.
+  apt:
+    name: ufw
+    state: present
+
+- name: Habilitar a porta 22/TCP para o Gophish.
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp    
+
+- name: Habilitar a porta 80/TCP para o Gophish.
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+
+- name: Habilitar a porta 443/TCP para o Gophish.
+  ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+
+- name: Habilitar a porta 3333/TCP para o Gophish.
+  ufw:
+    rule: allow
+    port: '3333'
+    proto: tcp
+
+- name: Habilitar o ufw.
+  ufw:
+    state: enabled
+    policy: deny
+  when: enable_ufw_firewall
+
+- name: Atualizar o cache do APT.
+  apt:
+    update_cache: yes
+
+- name: Atualizar o Sistema Operacional utilizando o APT.
+  apt:
+    upgrade: safe
+
+- name: Instalar os pacotes necessários para o gophish.
+  apt:
+    name: "{{ install_packages }}"
+    state: latest
+
+- name: Criar o grupo "{{ gophish_user }}"
+  group:
+    name: "{{ gophish_user }}"
+    state: present
+
+- name: Criar o usuário "{{ gophish_user }}".
+  user:
+    name: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+    shell: /sbin/nologin
+    append: yes
+
+- name: Criar o diretório "{{ gophish_dir }}".
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0755
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+  loop:
+    - "{{ gophish_dir }}"
+    - "{{ gophish_dir }}/log"
+
+- name: Verificar se o pacote "cryptography" está instalado no Python.
+  pip:
+    name: cryptography
+
+- name: Fazer o Download do gophish.zip versão 0.11.0.
+  get_url:
+    validate_certs: True
+    url: https://github.com/gophish/gophish/releases/download/v0.11.0/gophish-v0.11.0-linux-64bit.zip
+    dest: "/tmp/gophish.zip"
+    mode: 0755
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+
+- name: Descompactar o gophish.zip.
+  unarchive:
+    src: "/tmp/gophish.zip"
+    dest: "{{ gophish_dir }}"
+    remote_src: True 
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+
+- name: Mudar o dono e o grupo do diretório "{{ gophish_dir }}".
+  file:
+    path: "{{ gophish_dir }}"
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+    recurse: True
+
+- name: Garantir que o binário gophish tenha privilegio para setar portas via setcap.
+  capabilities:
+    path: "{{ gophish_dir }}/gophish"
+    capability: cap_net_bind_service+eip
+    state: present
+
+- name: Garantir que o binário gophish está com permissão de execução.
+  file:
+    path: "{{ gophish_dir }}/gophish"
+    mode: '0775'
+
+- name: Copiar o arquivo config.json para "{{ gophish_dir }}".
+  copy:
+    src: files/config.json
+    dest: "{{ gophish_dir }}/config.json"
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+    mode: 0644
+
+- name: Copiar o arquivo gophish.sh para "{{ gophish_dir }}".
+  copy:
+    src: files/gophish.sh
+    dest: "{{ gophish_dir }}/gophish.sh"
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+    mode: 0775
+
+- name: Criar o serviço do gophish no SystemD.
+  template:
+    src: gophish.service.j2
+    dest: /etc/systemd/system/gophish.service
+    mode: 644
+
+- name: Recarregar o SystemD para localizar o serviço do gophish.
+  systemd:
+    daemon_reload: yes
+
+- name: Habilitar o serviço gophish no SystemD.
+  service:
+    name: gophish.service
+    state: started
+    enabled: yes
+
+- name: Fazer o Download da versão mais atual do goreport.zip.
+  get_url:
+    validate_certs: True
+    url: https://github.com/chrismaddalena/Goreport/archive/refs/heads/master.zip
+    dest: "/tmp/goreport.zip"
+    mode: 0755
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+
+- name: Descompactar o goreport.zip.
+  unarchive:
+    src: "/tmp/goreport.zip"
+    dest: "/tmp"
+    remote_src: True 
+    owner: "{{ gophish_user }}"
+    group: "{{ gophish_user }}"
+
+- name: Renomeando o diretório do goreport.
+  command: "mv /tmp/Goreport-master /tmp/goreport"
+
+- name: Movendo o diretório do goreport.
+  command: "mv /tmp/goreport /opt"
+
+- name: Instalando os pacotes do necessário para o goreport.
+  pip:
+    requirements: "{{ goreport_dir }}/requirements.txt"
+
+# - name: Reiniciar o servidor dentro de 1 minuto .
+#   command: shutdown -r 1
+#   when: reboot_box
+

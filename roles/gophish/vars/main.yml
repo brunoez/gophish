@@ -1,0 +1,14 @@
+enable_ufw_firewall: true
+
+install_packages:
+  - postfix
+  - unzip
+  - libcap2-bin
+  - python3-pip
+  
+gophish_user: gophish
+gophish_dir: /opt/gophish
+goreport_dir: /opt/goreport
+
+reboot_box: true
+
