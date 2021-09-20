@@ -167,7 +167,6 @@
   pip:
     requirements: "{{ goreport_dir }}/requirements.txt"
 
-# - name: Reiniciar o servidor dentro de 1 minuto .
-#   command: shutdown -r 1
-#   when: reboot_box
+- name: Reiniciar o servidor dentro de 1 minuto .
+  command: shutdown -r 1  when: reboot_box
 
