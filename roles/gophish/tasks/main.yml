@@ -1,38 +1,3 @@
-- name: Garantir que o Firewall (ufw) está instalado no host.
-  apt:
-    name: ufw
-    state: present
-
-- name: Habilitar a porta 22/TCP para o Gophish.
-  ufw:
-    rule: allow
-    port: '22'
-    proto: tcp    
-
-- name: Habilitar a porta 80/TCP para o Gophish.
-  ufw:
-    rule: allow
-    port: '80'
-    proto: tcp
-
-- name: Habilitar a porta 443/TCP para o Gophish.
-  ufw:
-    rule: allow
-    port: '443'
-    proto: tcp
-
-- name: Habilitar a porta 3333/TCP para o Gophish.
-  ufw:
-    rule: allow
-    port: '3333'
-    proto: tcp
-
-- name: Habilitar o ufw.
-  ufw:
-    state: enabled
-    policy: deny
-  when: enable_ufw_firewall
-
 - name: Atualizar o cache do APT.
   apt:
     update_cache: yes
@@ -73,10 +38,10 @@
   pip:
     name: cryptography
 
-- name: Fazer o Download do gophish.zip versão 0.11.0.
+- name: Fazer o Download do gophish.zip versão 0.12.1.
   get_url:
     validate_certs: True
-    url: https://github.com/gophish/gophish/releases/download/v0.11.0/gophish-v0.11.0-linux-64bit.zip
+    url: https://github.com/gophish/gophish/releases/download/v0.12.1/gophish-v0.12.1-linux-64bit.zip
     dest: "/tmp/gophish.zip"
     mode: 0755
     owner: "{{ gophish_user }}"
@@ -86,7 +51,7 @@
   unarchive:
     src: "/tmp/gophish.zip"
     dest: "{{ gophish_dir }}"
-    remote_src: True 
+    remote_src: True
     owner: "{{ gophish_user }}"
     group: "{{ gophish_user }}"
 
@@ -106,7 +71,7 @@
 - name: Garantir que o binário gophish está com permissão de execução.
   file:
     path: "{{ gophish_dir }}/gophish"
-    mode: '0775'
+    mode: "0775"
 
 - name: Copiar o arquivo config.json para "{{ gophish_dir }}".
   copy:
@@ -153,7 +118,7 @@
   unarchive:
     src: "/tmp/goreport.zip"
     dest: "/tmp"
-    remote_src: True 
+    remote_src: True
     owner: "{{ gophish_user }}"
     group: "{{ gophish_user }}"
 
@@ -167,6 +132,6 @@
   pip:
     requirements: "{{ goreport_dir }}/requirements.txt"
 
-- name: Reiniciar o servidor dentro de 1 minuto .
-  command: shutdown -r 1  when: reboot_box
-
+# - name: Reiniciar o servidor dentro de 1 minuto .
+#   command: shutdown -r 1
+#   when: reboot_box
